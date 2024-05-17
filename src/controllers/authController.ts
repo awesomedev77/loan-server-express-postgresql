@@ -11,15 +11,15 @@ if (!jwtSecret) {
 }
 
 export const register = async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { email, full_name, description, password } = req.body;
   try {
-    const user = await findUserByUsername(username);
+    const user = await findUserByUsername(email);
     if (user) {
       return res.status(400).json({ message: 'Username already exists' });
     }
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
-    const newUser = await createUser(username, hash);
+    const newUser = await createUser(email, full_name, description, hash);
     res.status(201).json(newUser);
   } catch (error) {
     res.status(500).json({ message: 'Error registering newuser', error });
@@ -27,9 +27,9 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   try {
-    const user = await findUserByUsername(username);
+    const user = await findUserByUsername(email);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
