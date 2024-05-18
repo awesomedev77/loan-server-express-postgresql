@@ -11,16 +11,16 @@ if (!jwtSecret) {
 }
 
 export const register = async (req: Request, res: Response) => {
-  const { email, full_name, description, password } = req.body;
+  const { email, fullName, description, password } = req.body;
   try {
     const user = await findUserByUsername(email);
     if (user) {
-      return res.status(400).json({ message: 'Username already exists' });
+      return res.status(400).json({ message: 'Username already exists. Please try again.' });
     }
     const salt = bcrypt.genSaltSync(10);
     const hash = bcrypt.hashSync(password, salt);
-    const newUser = await createUser(email, full_name, description, hash);
-    res.status(201).json(newUser);
+    await createUser(email, fullName, description, hash);
+    res.status(201).json({ message: "success" });
   } catch (error) {
     res.status(500).json({ message: 'Error registering newuser', error });
   }
@@ -31,20 +31,20 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await findUserByUsername(email);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'User not found. Please try again.' });
     }
 
     const isMatch = bcrypt.compareSync(password, user.password);
     if (isMatch) {
-      const payload = { id: user.id, username: user.username };
+      const payload = { id: user.id, email: user.email };
       const token = jwt.sign(payload, jwtSecret, { expiresIn: '1h' });
 
-      res.json({
+      res.status(201).json({
         success: true,
         token: 'Bearer ' + token
       });
     } else {
-      res.status(400).json({ message: 'Password incorrect' });
+      res.status(400).json({ message: 'Password incorrect. Please try again.' });
     }
   } catch (error) {
     res.status(500).json({ message: 'Error during authentication', error });
