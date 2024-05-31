@@ -1,38 +1,31 @@
+// src/data-source.ts
+
+import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
-import { Pool } from 'pg';
+import { Application } from '../entity/Application';
+import { Company } from '../entity/Company';
+import { User } from '../entity/User'; // Assuming you have a User entity
+import { Document } from '../entity/Document';
+import { Report } from '../entity/Report';
+import { Query } from '../entity/Query';
+import { Message } from '../entity/Message';
 
 dotenv.config();
 
-console.log(process.env.DATABASE_URL);
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+export const AppDataSource = new DataSource({
+    type: "postgres",
+    url: process.env.DATABASE_URL,
+    synchronize: false, // Note: set this to false in production
+    logging: false,
+    entities: [User, Company, Application, Document, Report, Query, Message],
+    subscribers: [],
+    migrations: [],
 });
 
-const checkConnection = async () => {
-  const createUsersTableQuery = `
-  CREATE TABLE IF NOT EXISTS public.users (
-      id SERIAL PRIMARY KEY,
-      email VARCHAR(255),
-      full_name VARCHAR(255),
-      description VARCHAR(255),
-      password VARCHAR(255)
-  );
-  `;
-  try {
-    // Simple query to check connectivity
-    await pool.query('SELECT 1');
-    console.log('Database connection has been established successfully.');
-
-    // Check if the 'users' table exists and create if not
-    await pool.query(createUsersTableQuery);
-    console.log('Checked and ensured that the \'users\' table exists.');
-  } catch (error) {
-    console.error('Unable to connect to the database or check/create tables:', error);
-    throw error;
-  }
-};
-
-
-
-export { pool, checkConnection };
+AppDataSource.initialize()
+    .then(() => {
+        console.log("Data Source has been initialized!");
+    })
+    .catch((err) => {
+        console.error("Error during Data Source initialization", err);
+    });
