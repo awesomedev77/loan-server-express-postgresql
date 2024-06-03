@@ -5,6 +5,7 @@ import { createUser, findUserByUsername } from '../models/user';
 import dotenv from 'dotenv';
 import { AppDataSource } from '../utils/db';
 import { User } from '../entity/User';
+import { Not } from 'typeorm';
 
 dotenv.config();
 const jwtSecret = process.env.JWT_SECRET;
@@ -62,3 +63,91 @@ export const getUsers = async (req: Request, res: Response) => {
   }
 
 }
+
+export const getAll = async (req: Request, res: Response) => {
+  const userRepository = AppDataSource.getRepository(User);
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 9; // Default to 9 if limit is not provided
+
+  try {
+    const [users, total] = await userRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        id: 'DESC',
+      }
+    });
+
+    const data = {
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data: users
+    };
+
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    res.status(500).json({ message: 'Failed to fetch applications' });
+  }
+};
+
+
+export const addUser = async (req: Request, res: Response) => {
+  const { email, fullName, role, password } = req.body;
+  try {
+    const user = await findUserByUsername(email);
+    if (user) {
+      return res.status(400).json({ message: 'Email already exists. Please try again.' });
+    }
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    await createUser(email, fullName, role, hash);
+    return res.status(201).json({ message: "success" });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error registering newuser', error });
+  }
+};
+export const editUser = async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { email, fullName, role, password } = req.body;
+  const userRepository = AppDataSource.getRepository(User);
+  try {
+    const user = await userRepository.findOne({ where: { email: email, id: Not(id) } });
+    if (user) {
+      return res.status(400).json({ message: 'Email already exists. Please try again.' });
+    }
+    const currentUser = await userRepository.findOne({ where: { id: id } });
+    if (!currentUser) {
+      return res.status(404).json({ message: "User Not found" });
+    }
+    currentUser.email = email;
+    currentUser.fullName = fullName;
+    currentUser.role = role;
+
+    if (password && password !== "") {
+      const salt = bcrypt.genSaltSync(10);
+      const hash = bcrypt.hashSync(password, salt);
+      currentUser.password = hash;
+    }
+    await userRepository.save(currentUser);
+    return res.status(201).json(currentUser);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error registering newuser' });
+  }
+};
+
+export const deleteUser = async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({ where: { id: id } });
+    if (!user) {
+      return res.status(404).json({ message: 'User Not Found' });
+    }
+    await userRepository.remove(user);
+    return res.status(201).json({ message: "success" });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error registering newuser', error });
+  }
+};
