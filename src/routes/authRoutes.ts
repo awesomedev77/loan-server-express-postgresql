@@ -11,6 +11,7 @@ router.post('/login', login);
 router.get('/users', passport.authenticate('jwt', { session: false }), authenticate, getUsers);
 router.get('/getAll', passport.authenticate('jwt', { session: false }), authenticate, getAll);
 router.post('/user/add', passport.authenticate('jwt', { session: false }), authenticate, addUser);
+router.post('/user/edit/:id', passport.authenticate('jwt', { session: false }), authenticate, editUser);
 router.delete('/user/delete/:id', passport.authenticate('jwt', { session: false }), authenticate, deleteUser);
 
 export default router;
