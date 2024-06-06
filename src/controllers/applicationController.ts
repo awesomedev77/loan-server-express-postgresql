@@ -84,16 +84,26 @@ export const getApplications = async (req: Request, res: Response) => {
   const applicationRepository = AppDataSource.getRepository(Application);
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 9; // Default to 9 if limit is not provided
-
+  const user = req.user as User;
   try {
-    const [applications, total] = await applicationRepository.findAndCount({
-      relations: ['company', 'creator', 'assignee', 'loanDocuments'],
-      skip: (page - 1) * limit,
-      take: limit,
-      order: {
-        createdAt: 'DESC',
-      }
-    });
+    const [applications, total] = (user?.role.replaceAll(' ', '').toLowerCase() === "admin" || user?.role.replaceAll(' ', '').toLowerCase() === "bankmanager")
+      ? await applicationRepository.findAndCount({
+        relations: ['company', 'creator', 'assignee', 'loanDocuments'],
+        skip: (page - 1) * limit,
+        take: limit,
+        order: {
+          createdAt: 'DESC',
+        }
+      })
+      : await applicationRepository.findAndCount({
+        relations: ['company', 'creator', 'assignee', 'loanDocuments'],
+        where: { assignee: user },
+        skip: (page - 1) * limit,
+        take: limit,
+        order: {
+          createdAt: 'DESC',
+        }
+      });
 
     const data = {
       total,
